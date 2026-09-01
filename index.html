@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учим Литовский с Салютом! 🇱🇹</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-x: hidden;
+        }
+        /* Анимация разлетающихся звездочек */
+        @keyframes burst {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+                opacity: 0;
+            }
+        }
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: burst 0.8s ease-out forwards;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative">
+
+    <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-lg p-6 md:p-8 text-gray-800 relative overflow-hidden">
+        
+        <!-- Главное меню -->
+        <div id="start-screen" class="text-center py-4">
+            <div class="text-6xl mb-2">🇱🇹✨</div>
+            <h1 class="text-3xl font-extrabold text-indigo-600 mb-2">Литовский Тренажер</h1>
+            <p class="text-gray-600 mb-6">В базе <span id="total-words">0</span> слов! Тренируйся раундами по 10 слов с праздничным салютом.</p>
+            
+            <button onclick="startQuiz()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:opacity-90 transition transform active:scale-95 cursor-pointer">
+                Начать тренировку 🚀
+            </button>
+        </div>
+
+        <!-- Игровой экран -->
+        <div id="game-screen" class="hidden relative">
+            <div class="flex justify-between items-center mb-6">
+                <span id="score" class="font-bold text-indigo-600 text-lg">Счет: 0</span>
+                <span id="question-progress" class="text-sm font-semibold text-gray-500">Вопрос 1 из 10</span>
+                <button onclick="backToMenu()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+                    🏠 Меню
+                </button>
+            </div>
+
+            <div class="w-full bg-gray-200 h-2 rounded-full mb-8 overflow-hidden">
+                <div id="timer-bar" class="bg-indigo-500 h-full transition-all duration-300 w-full"></div>
+            </div>
+
+            <!-- Литовское слово БОЛЬШИМИ буквами -->
+            <div class="text-center mb-8 relative">
+                <p class="text-xs uppercase tracking-widest text-indigo-400 font-bold mb-2">Переведи слово:</p>
+                <div id="lithuanian-word" class="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-wide uppercase drop-shadow-sm">
+                    Sveiki
+                </div>
+            </div>
+
+            <!-- Варианты ответов -->
+            <div id="options-container" class="grid grid-cols-2 gap-3 relative">
+                <!-- Кнопки ответов -->
+            </div>
+        </div>
+
+        <!-- Экран результатов раунда -->
+        <div id="result-screen" class="hidden text-center py-6">
+            <div class="text-6xl mb-4" id="result-emoji">🏆</div>
+            <h2 class="text-3xl font-extrabold text-indigo-600 mb-2">Раунд завершен!</h2>
+            <p id="final-score-text" class="text-xl text-gray-700 mb-6">Твой результат: 10 из 10</p>
+            <button onclick="startQuiz()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:opacity-90 transition transform active:scale-95 cursor-pointer">
+                Следующий раунд 🔄
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Полная база из 174 литовских слов
+        const wordsDatabase = [
+            { lt: "ačiū", ru: "спасибо" },
+            { lt: "akis", ru: "глаз" },
+            { lt: "antradienis", ru: "вторник" },
+            { lt: "antras", ru: "второй" },
+            { lt: "arbata", ru: "чай" },
+            { lt: "aštuoni", ru: "восемь" },
+            { lt: "ateiti", ru: "прийти" },
+            { lt: "atleisti", ru: "простить, извинить; уволить" },
+            { lt: "atrodyti", ru: "казаться; выглядеть" },
+            { lt: "atsiprašau", ru: "извините / простите" },
+            { lt: "balandis", ru: "апрель" },
+            { lt: "baltas", ru: "белый" },
+            { lt: "bandyti", ru: "пытаться, испытывать" },
+            { lt: "bankas", ru: "банк" },
+            { lt: "birželis", ru: "июнь" },
+            { lt: "brolis", ru: "брат" },
+            { lt: "butas", ru: "квартира" },
+            { lt: "būti", ru: "быть, являться, находиться" },
+            { lt: "dabar", ru: "сейчас" },
+            { lt: "darbas", ru: "работа" },
+            { lt: "dažnai", ru: "часто" },
+            { lt: "dešimt", ru: "десять" },
+            { lt: "devyni", ru: "девять" },
+            { lt: "diena", ru: "день" },
+            { lt: "dirbti", ru: "работать, трудиться" },
+            { lt: "dovana", ru: "подарок" },
+            { lt: "draugas", ru: "друг" },
+            { lt: "draugė", ru: "подруга" },
+            { lt: "du", ru: "два" },
+            { lt: "dukra", ru: "дочь" },
+            { lt: "duona", ru: "хлеб" },
+            { lt: "duoti", ru: "дать, давать" },
+            { lt: "durys", ru: "дверь" },
+            { lt: "eiti", ru: "идти" },
+            { lt: "filmas", ru: "фильм" },
+            { lt: "galėti", ru: "мочь" },
+            { lt: "galva", ru: "голова" },
+            { lt: "galvoti", ru: "думать" },
+            { lt: "gatvė", ru: "улица" },
+            { lt: "gauti", ru: "достать, получить, получать" },
+            { lt: "gegužė", ru: "май" },
+            { lt: "geltonas", ru: "жёлтый" },
+            { lt: "gerti", ru: "пить" },
+            { lt: "gimtadienis", ru: "день рождения" },
+            { lt: "girdėti", ru: "слышать" },
+            { lt: "gyventi", ru: "жить" },
+            { lt: "gražus", ru: "красивый" },
+            { lt: "gruodis", ru: "декабрь" },
+            { lt: "iki", ru: "пока" },
+            { lt: "ilgas", ru: "долгий / длинный" },
+            { lt: "imti", ru: "брать" },
+            { lt: "jaunas", ru: "молодой" },
+            { lt: "juodas", ru: "чёрный" },
+            { lt: "kalba", ru: "язык / речь" },
+            { lt: "kalbėti", ru: "говорить" },
+            { lt: "karštas", ru: "горячий / жаркий" },
+            { lt: "kartais", ru: "иногда" },
+            { lt: "kava", ru: "кофе" },
+            { lt: "kavinė", ru: "кафе" },
+            { lt: "keturi", ru: "четыре" },
+            { lt: "ketvirtadienis", ru: "четверг" },
+            { lt: "klausyti", ru: "слушать; слушаться" },
+            { lt: "koja", ru: "нога" },
+            { lt: "kompiuteris", ru: "компьютер" },
+            { lt: "kovas", ru: "март" },
+            { lt: "labas", ru: "привет" },
+            { lt: "laikas", ru: "время" },
+            { lt: "langas", ru: "окно" },
+            { lt: "lapkritis", ru: "ноябрь" },
+            { lt: "laukti", ru: "ждать, ожидать" },
+            { lt: "liepa", ru: "июль" },
+            { lt: "lietus", ru: "дождь" },
+            { lt: "likti", ru: "остаться, оставаться" },
+            { lt: "lova", ru: "кровать" },
+            { lt: "mama", ru: "мама" },
+            { lt: "manyti", ru: "думать, полагать" },
+            { lt: "mašina", ru: "машина" },
+            { lt: "matyti", ru: "видеть" },
+            { lt: "mėlynas", ru: "синий" },
+            { lt: "mėnuo", ru: "месяц" },
+            { lt: "mėsa", ru: "мясо" },
+            { lt: "mesti", ru: "бросить, кинуть" },
+            { lt: "metai", ru: "год" },
+            { lt: "miestas", ru: "город" },
+            { lt: "mylėti", ru: "любить" },
+            { lt: "minutė", ru: "минута" },
+            { lt: "mokėti", ru: "знать, уметь; платить" },
+            { lt: "mokykla", ru: "школа" },
+            { lt: "moteris", ru: "женщина" },
+            { lt: "naktis", ru: "ночь" },
+            { lt: "namas", ru: "дом" },
+            { lt: "naujas", ru: "новый" },
+            { lt: "ne", ru: "нет" },
+            { lt: "niekada", ru: "никогда" },
+            { lt: "nulis", ru: "ноль" },
+            { lt: "oras", ru: "погода / воздух" },
+            { lt: "padėti", ru: "помочь, помогать / положить" },
+            { lt: "parduotuvė", ru: "магазин" },
+            { lt: "parkas", ru: "парк" },
+            { lt: "patikti", ru: "нравиться, понравиться" },
+            { lt: "penki", ru: "пять" },
+            { lt: "penktadienis", ru: "пятница" },
+            { lt: "pienas", ru: "молоко" },
+            { lt: "pietūs", ru: "обед" },
+            { lt: "pinigai", ru: "деньги" },
+            { lt: "pirkti", ru: "купить, покупать" },
+            { lt: "pirmadienis", ru: "понедельник" },
+            { lt: "pirmas", ru: "первый" },
+            { lt: "pradėti", ru: "начать, начинать" },
+            { lt: "prašau", ru: "пожалуйста (просьба)" },
+            { lt: "prašyti", ru: "просить" },
+            { lt: "pusryčiai", ru: "завтрак" },
+            { lt: "ranka", ru: "рука" },
+            { lt: "rasti", ru: "найти, находить" },
+            { lt: "raudonas", ru: "красный" },
+            { lt: "reikėti", ru: "быть нужным, требоваться" },
+            { lt: "reikšti", ru: "значить, означать; выражать" },
+            { lt: "restoranas", ru: "ресторан" },
+            { lt: "rytas", ru: "утро" },
+            { lt: "rytoj", ru: "завтра" },
+            { lt: "rugpjūtis", ru: "август" },
+            { lt: "rugsėjis", ru: "сентябрь" },
+            { lt: "sakyti", ru: "говорить" },
+            { lt: "saulė", ru: "солнце" },
+            { lt: "sausis", ru: "январь" },
+            { lt: "savaitė", ru: "неделя" },
+            { lt: "sekmadienis", ru: "воскресенье" },
+            { lt: "senas", ru: "старый / пожилой" },
+            { lt: "septyni", ru: "семь" },
+            { lt: "sesuo", ru: "сестра" },
+            { lt: "skanus", ru: "вкусный" },
+            { lt: "sniegas", ru: "снег" },
+            { lt: "spalis", ru: "октябрь" },
+            { lt: "stalas", ru: "стол" },
+            { lt: "sūnus", ru: "сын" },
+            { lt: "suprasti", ru: "понять, понимать" },
+            { lt: "susitikti", ru: "встретиться, встречаться" },
+            { lt: "šaltas", ru: "холодный" },
+            { lt: "šeima", ru: "семья" },
+            { lt: "šeši", ru: "шесть" },
+            { lt: "šeštadienis", ru: "суббота" },
+            { lt: "šiandien", ru: "сегодня" },
+            { lt: "šiltas", ru: "тёплый" },
+            { lt: "šventė", ru: "праздник" },
+            { lt: "taip", ru: "да" },
+            { lt: "telefonas", ru: "телефон" },
+            { lt: "tėtis", ru: "папа" },
+            { lt: "tėvai", ru: "родители" },
+            { lt: "tikėtis", ru: "надеяться" },
+            { lt: "trečiadienis", ru: "среда" },
+            { lt: "trečias", ru: "третий" },
+            { lt: "trys", ru: "три" },
+            { lt: "trumpas", ru: "короткий" },
+            { lt: "turėti", ru: "иметь; быть должным" },
+            { lt: "vaikai", ru: "дети" },
+            { lt: "vaikas", ru: "ребёнок" },
+            { lt: "vakaras", ru: "вечер" },
+            { lt: "vakarienė", ru: "ужин" },
+            { lt: "valanda", ru: "час" },
+            { lt: "vanduo", ru: "вода" },
+            { lt: "vardas", ru: "имя" },
+            { lt: "vasaris", ru: "февраль" },
+            { lt: "važiuoti", ru: "ехать" },
+            { lt: "veikti", ru: "делать; действовать" },
+            { lt: "vėjas", ru: "ветер" },
+            { lt: "vienas", ru: "один" },
+            { lt: "vieta", ru: "место" },
+            { lt: "vyras", ru: "муж / мужчина" },
+            { lt: "visada", ru: "всегда" },
+            { lt: "žalias", ru: "зелёный" },
+            { lt: "žinoti", ru: "знать" },
+            { lt: "žiūrėti", ru: "смотреть, глядеть" },
+            { lt: "žmogus", ru: "человек" },
+            { lt: "žmona", ru: "жена" }
+        ];
+
+        document.getElementById('total-words').textContent = wordsDatabase.length;
+
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const lithuanianWordEl = document.getElementById('lithuanian-word');
+        const optionsContainer = document.getElementById('options-container');
+        const scoreEl = document.getElementById('score');
+        const progressEl = document.getElementById('question-progress');
+        const timerBar = document.getElementById('timer-bar');
+        const finalScoreText = document.getElementById('final-score-text');
+        const resultEmoji = document.getElementById('result-emoji');
+
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+
+            score = 0;
+            currentIndex = 0;
+            // Берем 10 случайных слов из всех 174 для текущего раунда
+            currentQuestions = [...wordsDatabase].sort(() => 0.5 - Math.random()).slice(0, 10);
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= currentQuestions.length) {
+                endGame();
+                return;
+            }
+
+            isAnswered = false;
+            timerBar.style.width = '100%';
+
+            const q = currentQuestions[currentIndex];
+            progressEl.textContent = `Вопрос ${currentIndex + 1} из 10`;
+            scoreEl.textContent = `Счет: ${score}`;
+            lithuanianWordEl.textContent = q.lt;
+
+            // Генерируем варианты (1 правильный + 3 случайных из общей большой базы)
+            let options = [q.ru];
+            while (options.length < 4) {
+                let randomWord = wordsDatabase[Math.floor(Math.random() * wordsDatabase.length)].ru;
+                if (!options.includes(randomWord)) {
+                    options.push(randomWord);
+                }
+            }
+            options.sort(() => 0.5 - Math.random());
+
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.textContent = opt;
+                btn.className = "py-4 px-3 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 font-bold rounded-2xl text-base transition border-2 border-transparent cursor-pointer shadow-xs text-center relative overflow-visible";
+                btn.onclick = () => checkAnswer(btn, opt, q.ru);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedBtn, selectedOpt, correctOpt) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const buttons = optionsContainer.children;
+
+            if (selectedOpt === correctOpt) {
+                selectedBtn.classList.remove('bg-gray-100');
+                selectedBtn.classList.add('bg-emerald-500', 'text-white');
+                score += 10;
+                
+                // Салют из звездочек ✨
+                createFireworks(selectedBtn);
+            } else {
+                selectedBtn.classList.remove('bg-gray-100');
+                selectedBtn.classList.add('bg-rose-500', 'text-white');
+
+                for (let btn of buttons) {
+                    if (btn.textContent === correctOpt) {
+                        btn.classList.remove('bg-gray-100');
+                        btn.classList.add('bg-emerald-500', 'text-white');
+                    }
+                }
+            }
+
+            setTimeout(() => {
+                currentIndex++;
+                loadQuestion();
+            }, 1400);
+        }
+
+        function createFireworks(button) {
+            const rect = button.getBoundingClientRect();
+            const containerRect = optionsContainer.getBoundingClientRect();
+            
+            const x = rect.left - containerRect.left + rect.width / 2;
+            const y = rect.top - containerRect.top + rect.height / 2;
+
+            const emojis = ["⭐", "✨", "🌟", "💫", "🎉"];
+
+            for (let i = 0; i < 12; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 60 + Math.random() * 80;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+
+                optionsContainer.appendChild(particle);
+
+                setTimeout(() => {
+                    particle.remove();
+                }, 800);
+            }
+        }
+
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            finalScoreText.textContent = `Твой результат: ${score} из 100 очков`;
+            resultEmoji.textContent = score === 100 ? "👑" : "🌟";
+        }
+
+        function backToMenu() {
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
